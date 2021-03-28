@@ -1,0 +1,700 @@
+---
+title: "Wine Quality Prediction"
+date: "12/13/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r Library}
+#Install Library
+# install.packages("GGally")
+# install.packages("ggthemes")
+# install.packages("ggrepel")
+# install.packages("scales")
+# install.packages("corrplot")
+# install.packages('tidyverse')
+# install.packages('dplyr')
+# install.packages('rgl')
+# install.packages("stargazer")
+
+#Load Library
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(GGally)
+library(ggplot2)
+library(ggrepel)
+library(ggthemes) 
+library(scales) 
+library(corrplot)
+library(GGally)
+library(ggplot2)
+library(ggfortify)
+library(rgl)
+library(tree)
+library(randomForest)
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(gbm)
+library(stargazer)
+library(ggpubr)
+options(rgl.printRglwidget = TRUE)
+library(rgl)
+```
+
+```{r Loading Data}
+
+data <- read.csv("winequalityN.xls")
+
+#Handling Missing Values
+#Substituting the missing values with mean of the column
+for (i in 1:13){
+data[,c(i)] = ifelse(is.na(data[,c(i)]),
+                        ave(data[,c(i)], FUN = function(x) mean(x, na.rm = TRUE)),
+                     data[,c(i)])
+}
+#Missing Values Removed
+data
+```
+
+```{r Data Description Analysis}
+wine_analysis <- data
+wine_analysis$type = ifelse(wine_analysis$type == 'red','Red Wine','White Wine')
+
+wine_analysis$type = as.factor(wine_analysis$type)
+
+attach(wine_analysis)
+
+
+par(mfrow=c(1,2))
+hist1 = hist(fixed.acidity, breaks = 50, col = 'palevioletred3', xlab = "Figure 1a", main = "Fixed Acidity Frequency")
+box1 = boxplot(fixed.acidity~type,col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Fixed Acidity",xlab="Figure 1b",outline = TRUE)
+
+par(mfrow=c(1,2))
+hist2 = hist(volatile.acidity, breaks = 75, col = 'palevioletred3', xlab = "Figure 2a", main = "Volatile Acidity Frequency")
+box2 = boxplot(volatile.acidity~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Volatile Acidity",xlab="Figure 2b",outline = TRUE)
+
+
+
+
+par(mfrow=c(1,2))
+hist3 = hist(citric.acid, breaks = 75, col = 'palevioletred3', xlab = "Figure 3a", main = "Citric Acid Frequency")
+box3 = boxplot(citric.acid~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Citric Acid",xlab="Figure 3b",outline = TRUE)
+
+
+
+par(mfrow=c(1,2))
+hist4 = hist(residual.sugar, breaks = 75, col = 'palevioletred3', xlab = "Figure 4a", main = "Residual Sugar Frequency")
+box4 = boxplot(residual.sugar~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Residual Sugar",xlab="Figure 4b",outline = TRUE)
+
+
+
+
+par(mfrow=c(1,2))
+hist5 = hist(chlorides, breaks = 75, col = 'palevioletred3', xlab = "Figure 5a", main = "Chlorides Frequency")
+box5 = boxplot(chlorides~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Chlorides",xlab="Figure 5b",outline = TRUE)
+
+
+
+
+par(mfrow=c(1,2))
+hist6 = hist(free.sulfur.dioxide, breaks = 75, col = 'palevioletred3', xlab = "Figure 6a", main = "Free Sulphur Diaoxide Frequency")
+box6 = boxplot(free.sulfur.dioxide~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Free Sulfur Diaoxide",xlab="Figure 6b",outline = TRUE)
+
+
+
+
+par(mfrow=c(1,2))
+hist7 = hist(total.sulfur.dioxide, breaks = 50, col = 'palevioletred3', xlab = "Figure 7a", main = "Total Sulphur Diaoxide Frequency")
+box7 = boxplot(total.sulfur.dioxide~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Total Sulfur Diaoxide",xlab="Figure 7b",outline = TRUE)
+
+
+
+
+par(mfrow=c(1,2))
+hist8 = hist(density, breaks = 50, col = 'palevioletred3', xlab = "Figure 8a", main = "Density Frequency")
+box8 = boxplot(density~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Density",xlab="Figure 8b",outline = TRUE)
+
+
+
+
+par(mfrow=c(1,2))
+hist9 = hist(pH, breaks = 50, col = 'palevioletred3', xlab = "Figure 9a", main = "pH Frequency")
+box9 = boxplot(pH~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "pH",xlab="Figure 9b",outline = TRUE)
+
+
+
+
+par(mfrow=c(1,2))
+hist10 = hist(sulphates, breaks = 50, col = 'palevioletred3', xlab = "Figure 10a", main = "Sulphates Frequency")
+box10 = boxplot(sulphates~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Sulphates",xlab="Figure 10b",outline = TRUE)
+
+
+
+
+par(mfrow=c(1,2))
+hist11 = hist(alcohol, breaks = 50, col = 'palevioletred3', xlab = "Figure 11a", main = "Alcohol Frequency")
+box11 = boxplot(alcohol~type, col = c('palevioletred3','darkgrey'), outcol = 'black', pch = 16, main = "Alcohol", xlab="Figure 11b",outline = TRUE)
+
+
+wine_analysis$quality = ifelse(wine_analysis$quality<7,'Bad','Good')
+p1 <- ggplot(wine_analysis) + geom_bar(aes(x = type, fill = type),colour="black")+scale_fill_manual(values = c("palevioletred3","darkgrey"))+  theme(axis.line = element_line(colour = "black"),
+    panel.background = element_rect(fill = "transparent"), # bg of the panel
+    plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+    panel.grid.major = element_blank(), # get rid of major grid
+    panel.grid.minor = element_blank(), # get rid of minor grid
+    legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+    legend.box.background = element_rect(fill = "transparent") # get rid of legend panel bg
+  )
+
+p2<- ggplot(wine_analysis) + geom_bar(aes(x = quality, fill = quality),colour="black")+scale_fill_manual(values = c("palevioletred3","darkgrey"))+  
+  theme(
+    axis.line = element_line(colour = "black"),
+    panel.background = element_rect(fill = "transparent"), # bg of the panel
+    plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+    panel.grid.major = element_blank(), # get rid of major grid
+    panel.grid.minor = element_blank(), # get rid of minor grid
+    legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+    legend.box.background = element_rect(colour = "black")
+    )
+
+
+ggarrange(p1,p2, nrow = 2, ncol = 2)
+
+
+```
+
+
+```{r Correlation}
+#Correlation between variables
+corr_data <- data
+names(corr_data) <- c( "Type","Fixed Acidity"," Volatile Acidity","Citric Acid", "Residual Sugar","Chlorides","Free Sulfurdioxide","Total Sulfurdioxide", "Density","pH","Sulphates","Alcohol","Quality")
+
+ggcorr(corr_data, nbreaks = 10, low = "darkgrey", high = "palevioletred3", label_round = 2, label_size = 0.2, size =2, hjust =0.5)
+```
+
+```{r Variable Importance Analysis - RandomForest}
+wine_var_imp <- data
+wine_var_imp$quality = ifelse(wine_var_imp$quality<7,'Bad','Good')
+wine_var_imp$quality <- as.factor(wine_var_imp$quality)
+attach(wine_var_imp)
+levels(quality)
+
+rf_var_imp = randomForest(quality~type+fixed.acidity+volatile.acidity+citric.acid+residual.sugar+chlorides+free.sulfur.dioxide+total.sulfur.dioxide+density+pH+sulphates+alcohol,ntree=500,data=wine_var_imp,importance=TRUE,na.action=na.omit)
+
+#Results
+stargazer(importance(rf_var_imp), type="text",title="Variable Importance Results")
+varImpPlot(rf_var_imp)
+detach(wine_var_imp)
+
+```
+
+```{r Variable Imp PCA}
+wine_varimp <- data
+names(wine_varimp) <- c( "Type","Fixed Acidity"," Volatile Acidity","Citric Acid", "Residual Sugar","Chlorides","Free Sulfurdioxide","Total Sulfurdioxide", "Density","pH","Sulphates","Alcohol","Quality")
+
+sample_1 = sample.split(wine_varimp,SplitRatio = 0.3)
+wine_varimp = subset(wine_varimp,sample_1==TRUE)
+
+
+attach(wine_varimp)
+pca_var_imp = princomp(wine_varimp[,2:13], scale=TRUE, scores=T, cor=T)
+options(rgl.printRglwidget = TRUE)
+library(rgl)
+
+plot3d(pca_var_imp$scores[,1:3], size = 5,
+       col = "palevioletred3")
+text3d(pca_var_imp$loadings[,1:3], texts=rownames(pca_var_imp$loadings), col="black")
+coords <- NULL
+for (i in 1:nrow(pca_var_imp$loadings)) {
+  coords <- rbind(coords, rbind(c(0,0,0),pca_var_imp$loadings[i,1:3]))
+}
+lines3d(coords, col="black", lwd=1)
+
+#autoplot(pca_var_imp, data = wine_varimp[,2:13], loadings = TRUE,col="palevioletred3", loadings.label = TRUE, loadings.colour = 'black', loadings.label.colour = 'black')
+detach(wine_varimp)
+
+summary(pca_var_imp)
+
+```
+
+```{r Classification Model With Feature Selection - Random Forest}
+#To model the problem into classification problem we have considered
+#that the quality can be transformed into categorical variable.
+#Quality greater then equal to 7 is considered as good and Quality less than 7 os considered as bad. 
+#Using Random Forest, we have selected following variables as important as used these to find the best model for classification
+
+wine_class_rf = data
+wine_class_rf$quality = ifelse(wine_class_rf$quality<7,0,1)
+wine_class_rf$type = ifelse(wine_class_rf$type=='red',1,0)
+wine_class_rf
+```
+
+```{r Logistic Regression - RF}
+set.seed(0)
+sample_rf = sample.split(wine_class_rf$quality,SplitRatio = 0.5)
+test_rf = subset(wine_class_rf,sample_rf==TRUE)
+train_rf = subset(wine_class_rf,sample_rf == FALSE)
+results_rf = test_rf[,c(1,13)]
+
+attach(train_rf)
+#Logistic Regression Model
+set.seed(0)
+logit2 = glm(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH,family="binomial")
+summary(logit2)
+
+#calculating R squared
+require(rms)
+logit_r = lrm(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH, data=train_rf)
+logit_r
+
+#Logistics Regression Prediction
+
+set.seed(0)
+logit2_prediction = predict(logit2,test_rf,type='response')
+results_rf['logit2_pred'] = logit2_prediction
+results_rf$logit2_pred = ifelse(results_rf$logit2_pred>=0.5,1,0)
+
+t = 0
+for (i in 1:3248){
+  if (results_rf$quality[i] != results_rf$logit2_pred[i]){
+    t = t+1}
+}
+
+accuracy_l = 1-t/3248
+error_l = t/3248
+accuracy_l
+error_l
+```
+
+```{r Decision Tree - RF}
+#finding the optimal cp value
+
+mytree = rpart(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH, control=rpart.control(cp=0.01), data=train_rf)
+
+myoverfittedtree=rpart(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH,control=rpart.control(cp=0.0003),data=train_rf)
+
+set.seed(0)
+opt_cp = myoverfittedtree$cptable[which.min(myoverfittedtree$cptable[,"xerror"]),"CP"]
+opt_cp
+#0.004781668
+
+#building model
+set.seed(0)
+decision_tree2 = rpart::rpart(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH,method="class",control =rpart.control(cp=opt_cp),data=train_rf)
+summary(decision_tree2)
+rpart.plot(decision_tree2)
+
+#Decision Tree Prediction
+set.seed(0)
+decision_tree2_prediction = predict(decision_tree2,test_rf,type='class')
+results_rf['decision_tree2_pred'] = decision_tree2_prediction
+
+t = 0
+for (i in 1:3248){
+  if (results_rf$quality[i] != results_rf$decision_tree2_pred[i]){
+    t = t+1}
+}
+
+accuracy_d = 1-t/3248
+error_d = t/3248
+accuracy_d
+error_d
+```
+
+```{r Gradient Boosting Method - RF}
+set.seed(0)
+gbt1 = gbm(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH,data=train_rf,
+              distribution ="bernoulli",n.trees=10000,interaction.depth = 3)
+summary(gbt1)
+
+#Gradient Boosting Prediction
+
+gbt1_prediction = predict(gbt1,newdata = test_rf,n.trees = 10000, type = "response")
+results_rf['gbt1_pred'] = gbt1_prediction
+results_rf$gbt1_pred = ifelse(results_rf$gbt1_pred>=0.5,1,0)
+
+t = 0
+for (i in 1:3248){
+  if (results_rf$quality[i] != results_rf$gbt1_pred[i]){
+    t = t+1}
+}
+
+
+accuracy_g = 1-t/3248
+error_g = t/3248
+accuracy_g
+error_g
+```
+
+```{r Random Forest - RF}
+train_rf$quality = as.factor(train_rf$quality)
+test_rf$quality = as.factor(test_rf$quality)
+train_rf$type = as.factor(train_rf$type)
+test_rf$type = as.factor(test_rf$type)
+attach(train_rf)
+set.seed(0)
+random_forest2 = randomForest(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH+fixed.acidity,ntrees=10000,importance = TRUE,data=train_rf)
+summary(random_forest2)
+
+# Random Forest Prediction
+set.seed(0)
+random_forest2_prediction = predict(random_forest2,test_rf)
+results_rf['random_forest2_pred'] = random_forest2_prediction
+
+t = 0
+for (i in 1:3248){
+  if (results_rf$quality[i] != results_rf$random_forest2_pred[i]){
+    t = t+1}
+}
+
+accuracy_r = 1-t/3248
+error_r = t/3248
+accuracy_r
+#0.8774631
+error_r
+#0.1225369
+
+#Scores Table
+Accuracy_Scores = c(accuracy_l,accuracy_d,accuracy_r,accuracy_g)
+Error_Rates = c(error_l,error_d,error_r,error_g)
+Models = c("Logistic Regression","Decision Tree","Random Forest","Gradient Boosting")
+
+ac_data = data.frame(Models,Accuracy_Scores,Error_Rates)
+detach(train_rf)
+
+```
+
+```{r Results - Stargazer - RF }
+stargazer(ac_data,summary = FALSE,type = 'text',title = 'Accuracy Scores Using Random Forest Selected Features')
+```
+
+```{r Classification Model With Feature Selection - PCA}
+#To model the problem into classification problem we have considered
+#that the quality can be transformed into categorical variable.
+#Quality greater then equal to 7 is considered as good and Quality less than 7 os considered as bad. 
+#Using PCA, we have selected following variables as important as used these to find the best model for classification
+
+wine_class_pca = data
+wine_class_pca$quality = ifelse(wine_class_pca$quality<7,0,1)
+wine_class_pca$type = ifelse(wine_class_pca$type=='red',1,0)
+
+set.seed(0)
+sample_pca = sample.split(wine_class_pca$quality,SplitRatio = 0.5)
+test_pca = subset(wine_class_pca,sample_pca==TRUE)
+train_pca = subset(wine_class_pca,sample_pca == FALSE)
+results_pca = test_pca[,c(1,13)]
+attach(train_pca)
+```
+
+```{r Logistic Regression - PCA}
+set.seed(0)
+logit3 = glm(quality~type+alcohol+density+volatile.acidity+citric.acid+residual.sugar+chlorides+total.sulfur.dioxide+sulphates,family="binomial")
+summary(logit3)
+
+#Logistics Regression Prediction
+set.seed(0)
+logit3_prediction = predict(logit3,test_pca,type='response')
+results_pca['logit3_prediction'] = logit3_prediction
+results_pca$logit3_pred = ifelse(results_pca$logit3_pred>=0.5,1,0)
+
+t = 0
+for (i in 1:3248){
+  if (results_pca$quality[i] != results_pca$logit3_pred[i]){
+    t = t+1}
+}
+
+accuracy_lpca = 1-t/3248
+error_lpca = t/3248
+accuracy_lpca
+error_lpca
+```
+
+```{r Decision Tree - PCA}
+#finding the optimal cp value
+
+mytree_pca = rpart(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH, control=rpart.control(cp=0.01), data=train_rf)
+
+myoverfittedtree_pca=rpart(quality~volatile.acidity+residual.sugar+sulphates+alcohol+free.sulfur.dioxide+pH,control=rpart.control(cp=0.0003),data=train_rf)
+
+set.seed(0)
+opt_cp_pca = myoverfittedtree_pca$cptable[which.min(myoverfittedtree_pca$cptable[,"xerror"]),"CP"]
+opt_cp_pca
+#0.008346375
+
+#building model
+set.seed(0)
+decision_tree3 = rpart::rpart(quality~type+alcohol+density+volatile.acidity+citric.acid+residual.sugar+chlorides+total.sulfur.dioxide+sulphates,method="class",data=train_pca,control =rpart.control(cp=opt_cp_pca))
+summary(decision_tree3)
+rpart.plot(decision_tree3)
+
+#Decision Tree Prediction
+set.seed(0)
+decision_tree3_prediction = predict(decision_tree3,test_pca,type='class')
+results_pca['decision_tree3_pred'] = decision_tree3_prediction
+
+
+t = 0
+for (i in 1:3248){
+  if (results_pca$quality[i] != results_pca$decision_tree3_pred[i]){
+    t = t+1}
+}
+
+accuracy_dpca = 1-t/3248
+error_dpca = t/3248
+accuracy_dpca
+error_dpca
+```
+
+```{r Gradient Boosting Method - PCA}
+gbt2 = gbm(quality~type+alcohol+density+volatile.acidity+citric.acid+residual.sugar+chlorides+total.sulfur.dioxide+sulphates,distribution="bernoulli",n.trees=10000,interaction.depth = 3)
+summary(gbt2)
+
+#Gradient Boosting prediction
+gbt2_prediction = predict(gbt2,newdata = test_pca,n.trees = 10000, type = "response")
+results_pca['gbt2_pred'] = gbt2_prediction
+results_pca$gbt2_pred = ifelse(results_pca$gbt2_pred>=0.5,1,0)
+results_pca
+
+t = 0
+for (i in 1:3248){
+  if (results_pca$quality[i] != results_pca$gbt2_pred[i]){
+    t = t+1}
+}
+
+
+accuracy_gpca = 1-t/3248
+error_gpca = t/3248
+accuracy_gpca
+error_gpca
+```
+
+```{r Random Forest - PCA}
+train_pca$quality = as.factor(train_pca$quality)
+test_pca$quality = as.factor(test_pca$quality)
+train_pca$type = as.factor(train_pca$type)
+test_pca$type = as.factor(test_pca$type)
+attach(train_pca)
+random_forest3 = randomForest(quality~type+alcohol+density+volatile.acidity+citric.acid+residual.sugar+chlorides+total.sulfur.dioxide+sulphates,ntree = 500,importance = TRUE,data=train_pca)
+summary(random_forest3)
+
+# Random Forest Prediction
+random_forest3_prediction = predict(random_forest3,test_pca)
+results_pca['random_forest3_pred'] = random_forest3_prediction
+
+t = 0
+for (i in 1:3248){
+  if (results_pca$quality[i] != results_pca$random_forest3_pred[i]){
+    t = t+1}
+}
+
+accuracy_rpca = 1-t/3248
+error_rpca = t/3248
+accuracy_rpca
+error_rpca
+
+detach(train_pca)
+```
+
+```{r Accuracy PCA}
+#Accuracy scores table
+Accuracy_Scores_pca = c(accuracy_lpca,accuracy_dpca,accuracy_rpca,accuracy_gpca)
+Error_Rates_pca = c(error_lpca,error_dpca,error_rpca,error_gpca)
+Models_pca = c("Logistic Regression","Decision Tree","Random Forest","Gradient Boosting")
+
+ac_data_pca = data.frame(Models_pca,Accuracy_Scores_pca,Error_Rates_pca)
+
+stargazer(ac_data_pca,summary = FALSE,type = 'text',title = 'Accuracy Scores Using PCA Selected Features')
+
+
+```
+
+```{r PCA}
+#PCA
+wine_pca = data
+
+#sampling the dataset
+sample_pca = sample.split(wine_pca$type, SplitRatio = 0.9)
+wine_pca = subset(wine_pca,sample_pca==TRUE)
+
+names(wine_pca) <- c( "Type","Fixed Acidity"," Volatile Acidity","Citric Acid", "Residual Sugar","Chlorides","Free Sulfurdioxide","Total Sulfurdioxide", "Density","pH","Sulphates","Alcohol","Quality")
+
+#drop columns Alco free suphate
+#wine_pca = wine_pca[ , !names(wine_pca) %in% c("Alcohol", "Total Sulfurdioxide")]
+
+wine_pca$Quality = ifelse(wine_pca$Quality<7,'Bad_Quality','Good_Quality')
+wine_pca$Type = ifelse(wine_pca$Type == 'red','Red_Wine','White_Wine')
+
+#PCA Command
+pca = prcomp(na.omit(wine_pca[,2:12]),scale = TRUE, score = TRUE, cor=TRUE)
+#X_pca <- princomp(X[,2:12], scores=T, cor=T, scale = T)
+
+
+#PCA Variation Summary
+pve=(pca$sdev^2)/sum(pca$sdev^2)
+plot(cumsum(pve), ylim=c(0,1))
+
+
+autoplot(pca, data = wine_pca, loadings = TRUE,
+         frame = TRUE,frame.type = 'norm', colour = 'Quality', size = 0.5,
+         loadings.label = TRUE,loadings.colour = 'black', 
+         loadings.label.colour = 'black',legend = TRUE)+ scale_fill_manual(values = c("palevioletred3","darkgrey")) + scale_color_manual(values = c("palevioletred3","darkgrey"))+  
+  theme(
+    axis.line = element_line(colour = "black"),
+    panel.background = element_rect(fill = "transparent"), # bg of the panel
+    plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+    panel.grid.major = element_blank(), # get rid of major grid
+    panel.grid.minor = element_blank(), # get rid of minor grid
+    legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+    legend.box.background = element_rect(colour = "black")
+    )
+
+pca
+```
+
+```{r PCA - Red/White Wine}
+
+# 2PCA Red/White Wine
+
+p<-  theme(
+    axis.line = element_line(colour = "black"),
+    panel.background = element_rect(fill = "transparent"), # bg of the panel
+    plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+    panel.grid.major = element_blank(), # get rid of major grid
+    panel.grid.minor = element_blank(), # get rid of minor grid
+    legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+    legend.box.background = element_rect(colour = "black"))
+    
+    
+autoplot(pca, data = wine_pca, loadings = TRUE,
+         frame = TRUE,frame.type = 'norm', colour = 'Type', size = 0.5,
+         loadings.label = TRUE,loadings.colour = 'black', 
+         loadings.label.colour = 'black',legend = TRUE)+ scale_fill_manual(values = c("palevioletred3","darkgrey")) + scale_color_manual(values = c("palevioletred3","darkgrey"))+p
+
+```
+```{r PCA -3D}
+
+X <- wine_pca
+# PCA
+X_pca <- princomp(X[,2:12], scores=T, cor=T)
+# plot3d(X_pca$scores[,1:3],col = "darkgrey", size = 5)
+# text3d(X_pca$loadings[,1:3], texts=rownames(X_pca$loadings), col="black")
+# coords <- NULL
+# for (i in 1:nrow(X_pca$loadings)) {
+#   coords <- rbind(coords, rbind(c(0,0,0),X_pca$loadings[i,1:3]))
+# }
+# lines3d(coords, col="black", lwd=1)
+
+plot3d(X_pca$scores[,1:3],col = ifelse(X$Type == "Red_Wine","palevioletred3","darkgrey"), size = 5)
+text3d(X_pca$loadings[,1:3], texts=rownames(X_pca$loadings), col="black")
+coords <- NULL
+for (i in 1:nrow(X_pca$loadings)) {
+  coords <- rbind(coords, rbind(c(0,0,0),X_pca$loadings[i,1:3]))
+}
+lines3d(coords, col="black", lwd=1)
+
+```
+
+
+```{r Quality in Red and White Wine}
+wine_pca_rw <- data
+#wine_pca_rw$quality = ifelse(wine_pca_rw$quality<7,'Bad_Quality','Good_Quality')
+
+
+names(wine_pca_rw) <- c( "Type","Fixed Acidity"," Volatile Acidity","Citric Acid", "Residual Sugar","Chlorides","Free Sulfurdioxide","Total Sulfurdioxide", "Density","pH","Sulphates","Alcohol","Quality")
+
+#Good and Bad quality in RED and WHITE WINES respectively
+wine_pca_red = wine_pca_rw %>% filter(wine_pca_rw$Type == "red")
+wine_pca_white = wine_pca_rw %>% filter(wine_pca_rw$Type == "white")
+
+```
+
+
+
+PCA analysis with 2 components
+```{r PCA 2 Red and White Wine}
+#PCA 
+pca_red = prcomp(wine_pca_red[,c(2:13)],scale = TRUE)
+summary(pca_red)
+
+
+autoplot_r = autoplot(pca_red, data = wine_pca_red, loadings = TRUE, col = "palevioletred3",size = 1,
+                      loadings.label = TRUE,loadings.colour = 'black', 
+                      loadings.label.colour = 'black',legend = TRUE)+ 
+                      scale_fill_manual(values =c("mistyrose1","palevioletred3")) + 
+                      scale_color_manual(values = c("mistyrose1","palevioletred3")) 
+                      
+                      
+              
+        # col=ifelse(wine_pca_red$Quality=="Good","palevioletred3","mistyrose1"), loadings.label = TRUE,
+        # loadings.colour = 'black', loadings.label.colour = 'black')
+
+
+pca_white = prcomp(wine_pca_white[,c(2:13)],scale = TRUE)
+summary(pca_white)
+
+autoplot_w = autoplot(pca_white, data = wine_pca_white, loadings = TRUE, col = "darkgrey",size = 1,
+                      loadings.label = TRUE,loadings.colour = 'black', 
+                      loadings.label.colour = 'black',legend = TRUE)+ 
+                      scale_fill_manual(values =c("ivory3","ivory4")) + 
+                      scale_color_manual(values = c("ivory3","ivory4"))
+
+autoplot_r+p
+autoplot_w+p
+
+```
+
+
+
+
+```{r Red Wine PCA-3D}
+
+X <- wine_pca_red
+# PCA
+X_pca <- princomp(X[,2:13], scores=T, cor=T)
+
+# plot3d(X_pca$scores[,1:3],col = "palevioletred3", size = 5)
+# text3d(X_pca$loadings[,1:3], texts=rownames(X_pca$loadings), col="black")
+# coords <- NULL
+# for (i in 1:nrow(X_pca$loadings)) {
+#   coords <- rbind(coords, rbind(c(0,0,0),X_pca$loadings[i,1:3]))
+# }
+# lines3d(coords, col="black", lwd=1)
+# 
+
+
+
+plot3d(X_pca$scores[,1:3],col = ifelse(X$Quality >= 7,"palevioletred3","darkgrey"), size = 6)
+text3d(X_pca$loadings[,1:3], texts=rownames(X_pca$loadings), col="black")
+coords <- NULL
+for (i in 1:nrow(X_pca$loadings)) {
+  coords <- rbind(coords, rbind(c(0,0,0),X_pca$loadings[i,1:3]))
+}
+lines3d(coords, col="black", lwd=1)
+```
+
+
+```{r White Wine PCA -3D}
+
+X <- wine_pca_white
+# PCA
+X_pca <- princomp(X[,2:13], scores=T, cor=T)
+# plot3d(X_pca$scores[,1:3],col = "darkgrey", size = 5)
+# text3d(X_pca$loadings[,1:3], texts=rownames(X_pca$loadings), col="black")
+# coords <- NULL
+# for (i in 1:nrow(X_pca$loadings)) {
+#   coords <- rbind(coords, rbind(c(0,0,0),X_pca$loadings[i,1:3]))
+# }
+# lines3d(coords, col="black", lwd=1)
+
+plot3d(X_pca$scores[,1:3],col = ifelse(X$Quality >= 7,"palevioletred3","darkgrey"), size = 5)
+text3d(X_pca$loadings[,1:3], texts=rownames(X_pca$loadings), col="black")
+coords <- NULL
+for (i in 1:nrow(X_pca$loadings)) {
+  coords <- rbind(coords, rbind(c(0,0,0),X_pca$loadings[i,1:3]))
+}
+lines3d(coords, col="black", lwd=1)
+
+```
+
